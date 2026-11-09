@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tent Order Book</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+:root{--bg:#fff;--soft:#f8f6f1;--ink:#1b2536;--mu:#6b7280;--ln:#e4e0d6;--nv:#1c2b4a;--au:#a8864b;--wn:#9b2c2c;color-scheme:light;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,Roboto,sans-serif}
+.app{max-width:1060px;margin:0 auto;padding:0 16px 60px}
+header{border-bottom:3px double var(--au);padding:22px 0 14px;margin-bottom:20px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:flex-end}
+h1{font:700 28px Georgia,"Times New Roman",serif;color:var(--nv);margin:0}
+header p{margin:2px 0 0;color:var(--mu);font-size:13px}
+h2{font:700 19px Georgia,serif;color:var(--nv);margin:0 0 12px}
+.card{border:1px solid var(--ln);border-radius:6px;padding:18px;margin-bottom:20px;background:var(--bg)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.st{background:var(--soft);border-left:3px solid var(--au);padding:10px 14px}
+.st b{display:block;font:700 22px Georgia,serif;color:var(--nv)}.st span{font-size:12.5px;color:var(--mu)}
+.no{display:inline-block;border:1px solid var(--nv);color:var(--nv);font:700 20px Georgia,serif;padding:2px 14px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+label{display:block;font-size:12.5px;color:var(--mu);margin-bottom:3px}
+input,select,textarea{width:100%;font:inherit;color:var(--ink);background:#fff;border:1px solid #cfcabd;border-radius:4px;padding:8px 10px}
+input:focus,select:focus,textarea:focus,button:focus-visible,summary:focus-visible{outline:2px solid var(--au);outline-offset:1px}
+.priv{background:var(--soft);border-left:3px solid var(--wn);padding:8px 10px}
+.priv>label{color:var(--wn);font-weight:600}
+.pt{font-size:12.5px;color:var(--wn);margin:14px 0 8px;font-weight:600}
+.item{display:grid;grid-template-columns:76px 84px 1fr 38px;gap:8px;margin-bottom:8px}
+button{font:inherit;cursor:pointer;border-radius:4px;border:1px solid var(--nv);background:#fff;color:var(--nv);padding:7px 14px}
+button:hover{background:var(--soft)}
+button.p{background:var(--nv);color:#fff}button.p:hover{background:#2a3d66}
+button.g{border-color:var(--au);color:#7b5f2e}button.w{border-color:#d9b9b9;color:var(--wn)}
+button.s{padding:4px 10px;font-size:13px}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center}
+.tb{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-bottom:12px}
+.sc{overflow-x:auto}
+table.l{width:100%;border-collapse:collapse;min-width:720px}
+table.l th{text-align:left;font:600 12.5px "Segoe UI",sans-serif;color:var(--nv);background:var(--soft);padding:8px 6px;border-bottom:2px solid var(--au)}
+table.l td{padding:8px 6px;border-bottom:1px solid var(--ln);vertical-align:top;font-size:14px}
+.cu{color:var(--wn);font-weight:600}.hide .cu,.hide .ccol{display:none}
+.bd{font-size:12px;padding:2px 8px;border:1px solid var(--au);color:#7b5f2e;border-radius:10px;white-space:nowrap}
+.bd.Delivered{background:var(--nv);color:#fff;border-color:var(--nv)}.bd.Ready{background:var(--au);color:#fff}
+.ex{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.opt{border:1px solid var(--ln);padding:12px;border-radius:6px}.opt.f{border-color:var(--au);background:var(--soft)}
+.opt h3{margin:0 0 2px;font:700 15px Georgia,serif;color:var(--nv)}.opt p{margin:0 0 10px;font-size:12.5px;color:var(--mu)}
+.opt .row{margin:0}
+details{margin-top:14px}summary{cursor:pointer;color:var(--nv);font-weight:600}
+@media(max-width:640px){body{font-size:16px}.app{padding:0 12px 40px}header{padding-top:14px}header details{width:100%}h1{font-size:23px}.card{padding:14px}input,select,textarea{font-size:16px;padding:10px}button{min-height:44px}.item{grid-template-columns:64px 78px 1fr 44px}.tb{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.stats .st b{font-size:19px}.row button,.opt .row button{flex:1 1 40%}table.l{min-width:0}table.l tr:first-child{display:none}table.l,table.l tbody,table.l tr,table.l td{display:block;width:100%}table.l tr{border:1px solid var(--ln);border-radius:6px;margin-bottom:10px;padding:8px 10px}table.l td{border:0;padding:3px 0}table.l td[data-l]::before{content:attr(data-l);display:block;font-size:11.5px;color:var(--mu)}table.l input[type=checkbox]{width:22px!important;height:22px}table.l td.act{display:flex;gap:6px;padding-top:8px;white-space:normal!important}table.l td.act button{flex:1;min-height:40px}}
+#pa{display:none}
+@media print{body{background:#fff}.app{display:none}#pa{display:block}}
+</style></head><body>
+<div class="app" id="app">
+<header><div><h1 id="hn">Tent Order Book</h1><p id="hs">Order management</p><p id="sy" style="font-size:12px;color:#7b5f2e"></p></div>
+<details style="margin:0"><summary>Company details</summary>
+<div class="grid" style="margin-top:10px;min-width:260px"><div><label for="cn">Company naam</label><input id="cn" oninput="saveCfg()"></div><div><label for="ca">Address / phone (print header)</label><input id="ca" oninput="saveCfg()"></div></div></details></header>
+
+<div class="card" id="tcard" style="display:none"><h2>Team sync</h2><p style="margin:0 0 10px;color:var(--mu);font-size:13px">Apna team code daalo. Jis jis ke paas yahi code hoga, sabke orders live sync honge. Ye har device par sirf ek baar daalna hai.</p><div class="row" style="margin:0"><input id="tc" placeholder="Team code (kam se kam 8 characters)" style="flex:1;min-width:200px" autocomplete="off"><button class="p" onclick="setTeam()">Connect</button></div></div>
+<div class="stats" id="stats"></div>
+
+<div class="card">
+<div class="no" id="ono">B_1</div>
+<div class="grid">
+<div class="priv"><label for="cust">Customer ka naam (private)</label><input id="cust"></div>
+<div class="priv"><label for="ph">Customer phone (private)</label><input id="ph" type="tel"></div>
+<div><label for="date">Date (delivery / event)</label><input id="date" type="date"></div>
+<div><label for="tag">Brand / Mark</label><input id="tag" value="STAR"></div>
+<div><label for="stt">Status</label><select id="stt"><option>Pending</option><option>In production</option><option>Ready</option><option>Delivered</option></select></div>
+</div>
+<h2 style="margin-top:18px">Items</h2><div id="items"></div>
+<button class="g" onclick="addRow()">+ Item jodo</button>
+<div style="margin-top:12px"><label for="note">Factory note (factory copy mein dikhega)</label><textarea id="note" rows="2" placeholder="Rang, stripes, special instruction..."></textarea></div>
+<div class="pt">Sirf aapke liye (factory copy mein kabhi nahi jayega)</div>
+<div class="grid">
+<div class="priv"><label for="amt">Total amount (Rs)</label><input id="amt" type="number" min="0"></div>
+<div class="priv"><label for="adv">Advance mila (Rs)</label><input id="adv" type="number" min="0"></div>
+<div class="priv"><label for="pn">Private note</label><input id="pn"></div>
+</div>
+<div class="row"><button class="p" id="save" onclick="saveOrder()">Order save karo</button><button onclick="resetForm()">Form saaf karo</button></div>
+</div>
+
+<div class="card"><h2>Orders</h2>
+<div class="tb"><input id="q" placeholder="Search: order no, customer, size..." oninput="render()" aria-label="Search"><select id="fs" onchange="render()" aria-label="Status filter"><option value="">Saare status</option><option>Pending</option><option>In production</option><option>Ready</option><option>Delivered</option></select></div>
+<div class="row" style="margin:0 0 10px"><label style="margin:0"><input type="checkbox" id="hc" style="width:auto" onchange="render()"> Screen par customer naam chhupao</label><button class="s" onclick="all(1)">Sab select</button><button class="s" onclick="all(0)">Select hatao</button></div>
+<div class="sc"><table class="l" id="tbl"></table></div></div>
+
+<div class="card"><h2>Export</h2>
+<p style="margin:0 0 12px;color:var(--mu);font-size:13px" id="selinfo"></p>
+<div class="ex">
+<div class="opt"><h3>Apni copy</h3><p>Customer naam, phone, status aur amount ke saath.</p>
+<div class="row"><button class="p" onclick="xlsx(false)">Excel (.xlsx)</button><button class="p" onclick="word(false)">Word (.docx)</button><button onclick="doPrint(false)">Print / PDF</button><button onclick="csv(false)">CSV</button></div></div>
+<div class="opt f"><h3>Factory copy</h3><p>Naam, phone aur amount nahi. Sirf order no, date, items, brand, factory note.</p>
+<div class="row"><button class="p" onclick="xlsx(true)">Excel (.xlsx)</button><button class="p" onclick="word(true)">Word (.docx)</button><button onclick="doPrint(true)">Print / PDF</button><button onclick="csv(true)">CSV</button></div></div>
+</div>
+<div class="row" style="margin-top:18px"><button class="g" onclick="showTeam(true)">Team code badlo</button><button class="g" onclick="backup()">Backup download (JSON)</button><label class="g" style="margin:0;cursor:pointer;border:1px solid var(--au);padding:7px 14px;border-radius:4px;color:#7b5f2e">Backup restore<input type="file" accept=".json" onchange="restore(this)" style="display:none"></label></div>
+</div></div>
+<div id="pa"></div>
+<datalist id="sz"><option value="12*12 single decker"><option value="15*15 single decker"><option value="15*15 double decker"><option value="20*30 single decker"><option value="30*30 single decker"><option value="30*30 double decker"><option value="12*6 stall"></datalist>
+<script>
+var KEY="tentOrders_v1",CK="tentCfg_v1",orders=[],cfg={n:"",a:""},editing=null,sel={};
+var PCSS='.doc{font:14px "Times New Roman",serif;color:#000}.doc h1{font-size:20px;text-align:center;margin:0}.doc .sb{text-align:center;font-size:12px;margin:2px 0 12px;border-bottom:2px solid #a8864b;padding-bottom:8px}.doc table{width:100%;border-collapse:collapse;page-break-inside:avoid;margin-bottom:0}.doc td{border:1px solid #000;padding:4px 8px}.doc td.h{text-align:center;font-weight:700;background:#f1ede3}.doc td.s{text-align:center;width:22%}.doc td.q{width:14%}.doc td.m{font-size:12px}';
+function seed(){return []}
+function norm(o){o.ph=o.ph||"";o.note=o.note||"";o.pn=o.pn||"";o.amt=+o.amt||0;o.adv=+o.adv||0;o.st=o.st||"Pending";return o}
+function load(){try{var r=localStorage.getItem(KEY);if(r)orders=JSON.parse(r);var c=localStorage.getItem(CK);if(c)cfg=JSON.parse(c)}catch(e){}
+if(!orders.length)orders=seed();orders=orders.map(norm);persist()}
+/* ===== SYNC SETUP: Firebase project ki config yahan paste karo ===== */
+var FIREBASE_CONFIG={apiKey:"",authDomain:"",projectId:"",storageBucket:"",messagingSenderId:"",appId:""};
+var TC="tentTeam_v1";
+function team(){try{return localStorage.getItem(TC)||""}catch(e){return""}}
+function showTeam(b){document.getElementById("tcard").style.display=b?"block":"none";if(b){document.getElementById("tc").value=team();window.scrollTo({top:0,behavior:"smooth"})}}
+function setTeam(){var v=g("tc");if(v.length<8){alert("Kam se kam 8 characters ka lamba code rakho.");return}try{localStorage.setItem(TC,v)}catch(e){}location.reload()}
+function connect(){
+if(!FIREBASE_CONFIG.projectId){sy("Sync setup baaki hai: index.html mein Firebase config daalo");return null}
+if(!window.firebase){sy("Sync library load nahi hui, internet check karo");return null}
+var c=team();if(!c){sy("Sync ke liye team code daalo");showTeam(true);return null}
+try{if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);var f=firebase.firestore(),b="teams/"+c+"/";
+return{doc:function(p){return f.doc(b+p)},collection:function(p){return f.collection(b+p)}}}catch(e){sy("Sync error: config check karo");return null}}
+var DB=null,pt;
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(orders))}catch(e){}syncOrders()}
+function push(){clearTimeout(pt);pt=setTimeout(doPush,500)}
+function doPush(){if(!DB)return;DB.doc("app/cfg").set({n:cfg.n||"",a:cfg.a||""}).catch(function(){sy("Sync nahi hua, internet check karo")})}
+function sy(t){var e=document.getElementById("sy");if(e)e.textContent=t}
+var lastSent={},ON="Live sync on: sabhi devices par turant update hota hai";
+function syncOrders(){if(!DB)return;var cur={};orders.forEach(function(o){var j=JSON.stringify(o);cur[o.no]=1;if(lastSent[o.no]!==j){lastSent[o.no]=j;DB.doc("orders/"+o.no).set(o).catch(function(){sy("Sync nahi hua, internet check karo")})}});Object.keys(lastSent).forEach(function(k){if(!cur[k]){delete lastSent[k];DB.doc("orders/"+k).delete().catch(function(){})}})}
+function saveCfg(){cfg.n=g("cn");cfg.a=g("ca");try{localStorage.setItem(CK,JSON.stringify(cfg))}catch(e){}push();hdr()}
+function hdr(){document.getElementById("hn").textContent=cfg.n||"Tent Order Book";document.getElementById("hs").textContent=cfg.a||"Order management"}
+function g(i){return document.getElementById(i).value.trim()}
+function sv(i,v){document.getElementById(i).value=v}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+var START_NO=18; /* pehla order number B_18 se shuru hoga */
+function nextNo(){return Math.max(START_NO,orders.reduce(function(m,o){return Math.max(m,o.no)},0)+1)}
+function fd(d){if(!d)return"";var p=d.split("-");return p[2]+"."+p[1]+"."+p[0]}
+function inr(n){return"Rs "+Number(n).toLocaleString("en-IN")}
+function addRow(q,u,d){var r=document.createElement("div");r.className="item";
+r.innerHTML='<input type="number" min="1" aria-label="Quantity" placeholder="Qty" value="'+esc(q||"")+'"><select aria-label="Unit"><option>SET</option><option>PCS</option></select><input aria-label="Size" list="sz" placeholder="e.g. 15*15 double decker" value="'+esc(d||"")+'"><button class="w" aria-label="Item hatao" onclick="this.parentNode.remove()">&times;</button>';
+r.querySelector("select").value=u||"SET";document.getElementById("items").appendChild(r)}
+function resetForm(){editing=null;["cust","ph","date","note","amt","adv","pn"].forEach(function(i){sv(i,"")});sv("tag","STAR");sv("stt","Pending");
+document.getElementById("items").innerHTML="";addRow();document.getElementById("ono").textContent="B_"+nextNo();document.getElementById("save").textContent="Order save karo"}
+function saveOrder(){var items=[];document.querySelectorAll("#items .item").forEach(function(r){var i=r.querySelectorAll("input,select"),q=i[0].value,d=i[2].value.trim();if(q&&d)items.push({q:+q,u:i[1].value,d:d})});
+if(!items.length){alert("Kam se kam ek item (quantity aur size) bharo.");return}
+var o=norm({no:editing||nextNo(),cust:g("cust"),ph:g("ph"),date:g("date"),tag:g("tag"),st:g("stt"),items:items,note:g("note"),pn:g("pn"),amt:g("amt"),adv:g("adv")});
+if(editing)orders=orders.map(function(x){return x.no===editing?o:x});else orders.push(o);persist();resetForm();render()}
+function find(n){return orders.filter(function(x){return x.no===n})[0]}
+function edit(n,copy){var o=find(n);if(!o)return;editing=copy?null:n;
+document.getElementById("ono").textContent=copy?"B_"+nextNo()+" (copy)":"B_"+n+" (edit)";
+sv("cust",o.cust);sv("ph",o.ph);sv("date",o.date);sv("tag",o.tag);sv("stt",o.st);sv("note",o.note);sv("amt",o.amt||"");sv("adv",o.adv||"");sv("pn",o.pn);
+document.getElementById("items").innerHTML="";o.items.forEach(function(i){addRow(i.q,i.u,i.d)});
+document.getElementById("save").textContent=copy?"Naya order save karo":"Badlav save karo";window.scrollTo({top:0,behavior:"smooth"})}
+function del(n){if(confirm("Order B_"+n+" hata dein?")){orders=orders.filter(function(x){return x.no!==n});delete sel[n];persist();resetForm();render()}}
+function tog(n,c){if(c)sel[n]=1;else delete sel[n];info()}
+function all(c){sel={};if(c)orders.forEach(function(o){sel[o.no]=1});render()}
+function info(){var n=Object.keys(sel).length;document.getElementById("selinfo").textContent=n?n+" order select hain, sirf wahi export honge.":"Koi order select nahi, isliye saare orders export honge. (Orders list mein tick karke chuno.)"}
+function render(){var q=g("q").toLowerCase(),fs=g("fs");
+var list=orders.slice().sort(function(a,b){return b.no-a.no}).filter(function(o){
+if(fs&&o.st!==fs)return false;if(!q)return true;
+return(("b_"+o.no+" "+o.cust+" "+o.ph+" "+o.tag+" "+o.items.map(function(i){return i.d}).join(" ")).toLowerCase().indexOf(q)>-1)});
+var t=document.getElementById("tbl");t.parentNode.className="sc"+(document.getElementById("hc").checked?" hide":"");
+var h='<tr><th><input type="checkbox" aria-label="Sab select" style="width:auto" onchange="all(this.checked)"></th><th>Order</th><th class="ccol">Customer</th><th>Date</th><th>Items</th><th>Status</th><th>Balance</th><th></th></tr>';
+list.forEach(function(o){var b=o.amt-o.adv;
+h+='<tr><td><input type="checkbox" style="width:auto" aria-label="Select B_'+o.no+'" '+(sel[o.no]?"checked":"")+' onchange="tog('+o.no+',this.checked)"></td><td data-l="Order"><b>B_'+o.no+'</b><br><small>'+esc(o.tag)+'</small></td><td class="ccol cu" data-l="Customer">'+esc(o.cust)+(o.ph?'<br><small>'+esc(o.ph)+'</small>':"")+'</td><td data-l="Date">'+fd(o.date)+'</td><td data-l="Items">'+o.items.map(function(i){return esc(i.q+" "+i.u+" - "+i.d)}).join("<br>")+(o.note?'<br><i>'+esc(o.note)+'</i>':"")+'</td><td data-l="Status"><span class="bd '+esc(o.st)+'">'+esc(o.st)+'</span></td><td class="cu" data-l="Balance">'+(o.amt?inr(b):"-")+'</td><td class="act" style="white-space:nowrap"><button class="s" onclick="edit('+o.no+')">Edit</button> <button class="s" onclick="edit('+o.no+',1)">Copy</button> <button class="s w" onclick="del('+o.no+')">Hatao</button></td></tr>'});
+if(!list.length)h+='<tr><td colspan="8">Koi order nahi mila.</td></tr>';
+t.innerHTML=h;
+var pend=orders.filter(function(o){return o.st!=="Delivered"}).length,due=orders.reduce(function(s,o){return s+Math.max(0,o.amt-o.adv)},0),tot=orders.reduce(function(s,o){return s+o.items.reduce(function(a,i){return a+i.q},0)},0);
+document.getElementById("stats").innerHTML='<div class="st"><b>'+orders.length+'</b><span>Total orders</span></div><div class="st"><b>'+pend+'</b><span>Abhi baaki (delivered nahi)</span></div><div class="st"><b>'+tot+'</b><span>Total sets / pcs</span></div><div class="st"><b>'+inr(due)+'</b><span>Baaki payment (private)</span></div>';info()}
+function getList(){var k=Object.keys(sel).length;return orders.filter(function(o){return !k||sel[o.no]}).sort(function(a,b){return a.no-b.no})}
+function title(o,f){return"B_"+o.no+(!f&&o.cust?"_"+o.cust.toUpperCase():"")+(o.date?"  "+fd(o.date):"")}
+function mk(f){var h='<div class="doc"><h1>'+esc(cfg.n||"Order List")+'</h1><div class="sb">'+(cfg.a?esc(cfg.a)+" | ":"")+(f?"Order List":"Order List (Private)")+" | "+fd(new Date().toISOString().slice(0,10))+'</div>';
+getList().forEach(function(o){h+='<table><tr><td class="h" colspan="3">'+esc(title(o,f))+'</td></tr>';
+o.items.forEach(function(i,k){h+='<tr><td class="q">'+esc(i.q+" "+i.u)+'</td><td>'+esc(i.d.toUpperCase())+'</td>'+(k===0?'<td class="s" rowspan="'+o.items.length+'">'+esc(o.tag)+'</td>':"")+'</tr>'});
+if(o.note)h+='<tr><td class="m" colspan="3">Note: '+esc(o.note)+'</td></tr>';
+if(!f){var m=[];if(o.ph)m.push("Phone: "+o.ph);m.push("Status: "+o.st);if(o.amt)m.push("Amount "+inr(o.amt)+", Advance "+inr(o.adv)+", Balance "+inr(o.amt-o.adv));if(o.pn)m.push("Private: "+o.pn);h+='<tr><td class="m" colspan="3">'+esc(m.join(" | "))+'</td></tr>'}
+h+='</table><div style="height:8px"></div>'});return h+'</div>'}
+function doPrint(f){var s=document.getElementById("ps");if(!s){s=document.createElement("style");s.id="ps";s.textContent="@media print{"+PCSS+"}";document.head.appendChild(s)}
+document.getElementById("pa").innerHTML=mk(f);window.print()}
+function saveOld(blob,name){var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove()}
+async function save(blob,name){try{var d=window.claude?await claude.use("downloads"):null;if(d){await d.save({filename:name,data:blob});return}}catch(e){if(e&&e.code==="declined")return}saveOld(blob,name)}
+function para(t,o){return'<w:p><w:pPr><w:spacing w:after="0"/>'+(o.c?'<w:jc w:val="center"/>':'')+'</w:pPr>'+(t?'<w:r><w:rPr>'+(o.b?'<w:b/>':'')+'<w:sz w:val="'+(o.z||22)+'"/></w:rPr><w:t xml:space="preserve">'+esc(t)+'</w:t></w:r>':'')+'</w:p>'}
+function cell(t,w,o){o=o||{};return'<w:tc><w:tcPr><w:tcW w:w="'+w+'" w:type="dxa"/>'+(o.sp?'<w:gridSpan w:val="'+o.sp+'"/>':'')+(o.vm?(o.vm==="r"?'<w:vMerge w:val="restart"/>':'<w:vMerge/>'):'')+(o.sh?'<w:shd w:val="clear" w:color="auto" w:fill="F1EDE3"/>':'')+(o.vm?'<w:vAlign w:val="center"/>':'')+'</w:tcPr>'+para(t,o)+'</w:tc>'}
+function word(f){if(!window.JSZip){alert("Word library load nahi hui (internet check karo).");return}
+var b=para(cfg.n||"Order List",{c:1,b:1,z:36})+para((cfg.a?cfg.a+" | ":"")+(f?"Order List":"Order List (Private)")+" | "+fd(new Date().toISOString().slice(0,10)),{c:1,z:20})+para("",{});
+var bd=['top','left','bottom','right','insideH','insideV'].map(function(s){return'<w:'+s+' w:val="single" w:sz="4" w:space="0" w:color="000000"/>'}).join("");
+getList().forEach(function(o){var t='<w:tbl><w:tblPr><w:tblW w:w="9000" w:type="dxa"/><w:tblBorders>'+bd+'</w:tblBorders></w:tblPr><w:tblGrid><w:gridCol w:w="1400"/><w:gridCol w:w="5600"/><w:gridCol w:w="2000"/></w:tblGrid>';
+t+='<w:tr>'+cell(title(o,f),9000,{sp:3,c:1,b:1,sh:1})+'</w:tr>';
+o.items.forEach(function(i,k){t+='<w:tr>'+cell(i.q+" "+i.u,1400)+cell(i.d.toUpperCase(),5600)+cell(k?"":o.tag,2000,{c:1,vm:k?"c":"r"})+'</w:tr>'});
+if(o.note)t+='<w:tr>'+cell("Note: "+o.note,9000,{sp:3,z:20})+'</w:tr>';
+if(!f){var m=[];if(o.ph)m.push("Phone: "+o.ph);m.push("Status: "+o.st);if(o.amt)m.push("Amount "+inr(o.amt)+", Advance "+inr(o.adv)+", Balance "+inr(o.amt-o.adv));if(o.pn)m.push("Private: "+o.pn);t+='<w:tr>'+cell(m.join(" | "),9000,{sp:3,z:20})+'</w:tr>'}
+b+=t+'</w:tbl>'+para("",{})});
+var z=new JSZip();z.file("[Content_Types].xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+z.file("_rels/.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+z.file("word/document.xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+b+'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1000" w:right="1400" w:bottom="1000" w:left="1400" w:header="500" w:footer="500" w:gutter="0"/></w:sectPr></w:body></w:document>');
+z.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}).then(function(bl){save(bl,(f?"factory-orders":"orders-private")+".docx")})}
+function wordOld(f){var d='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Order List</title><style>'+PCSS+'</style></head><body>'+mk(f)+'</body></html>';
+save(new Blob(["\ufeff"+d],{type:"application/msword"}),(f?"factory-orders":"orders-private")+".doc")}
+function rows(f){var r=[f?["Order No","Date","Qty","Unit","Size / Type","Brand","Factory note"]:["Order No","Customer","Phone","Date","Qty","Unit","Size / Type","Brand","Factory note","Status","Amount","Advance","Balance","Private note"]];
+getList().forEach(function(o){o.items.forEach(function(i,k){var a=["B_"+o.no];if(!f)a.push(o.cust,o.ph);a.push(fd(o.date),i.q,i.u,i.d,o.tag,o.note);
+if(!f)a.push(o.st,k?"":o.amt,k?"":o.adv,k?"":o.amt-o.adv,k?"":o.pn);r.push(a)})});return r}
+function xlsx(f){if(!window.XLSX){alert("Excel library load nahi hui (internet check karo). CSV use karo.");return}
+var r=rows(f),ws=XLSX.utils.aoa_to_sheet(r);ws["!cols"]=r[0].map(function(h,i){return{wch:/Size/.test(h)?34:/note|Customer/i.test(h)?22:12}});
+var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Orders");save(new Blob([XLSX.write(wb,{bookType:"xlsx",type:"array"})]),(f?"factory-orders":"orders-private")+".xlsx")}
+function csv(f){var c=rows(f).map(function(r){return r.map(function(v){return'"'+String(v).replace(/"/g,'""')+'"'}).join(",")}).join("\r\n");save(new Blob(["\ufeff"+c],{type:"text/csv"}),(f?"factory-orders":"orders-private")+".csv")}
+function backup(){save(new Blob([JSON.stringify(orders)],{type:"application/json"}),"orders-backup.json")}
+function restore(el){var fl=el.files[0];if(!fl)return;var r=new FileReader();r.onload=function(){try{var d=JSON.parse(r.result);if(!Array.isArray(d))throw 0;if(confirm(d.length+" orders restore karein? Abhi ka data replace hoga.")){orders=d.map(norm);persist();resetForm();render()}}catch(e){alert("Ye valid backup file nahi hai.")}};r.readAsText(fl)}
+load();sv("cn",cfg.n);sv("ca",cfg.a);hdr();resetForm();render();
+(function(){try{DB=connect();if(!DB)return;
+var mig=false,first=true;
+DB.doc("app/cfg").onSnapshot(function(s){if(!s.exists)return;var c=s.data()||{};if((c.n||"")!==(cfg.n||"")||(c.a||"")!==(cfg.a||"")){cfg={n:c.n||"",a:c.a||""};sv("cn",cfg.n);sv("ca",cfg.a);hdr()}});
+DB.collection("orders").onSnapshot(function(snap){
+if(snap.empty&&!mig){mig=true;DB.doc("app/state").get().then(function(s){if(s.exists){try{var o=JSON.parse(s.data().o);if(Array.isArray(o))orders=o.map(norm)}catch(e){}}lastSent={};persist();doPush();render();sy(ON)}).catch(function(){lastSent={};persist()});return}
+mig=true;var arr=snap.docs.map(function(d){return norm(d.data())});
+lastSent={};arr.forEach(function(o){lastSent[o.no]=JSON.stringify(o)});
+var ch=[];if(!first&&!snap.metadata.hasPendingWrites)snap.docChanges().forEach(function(c){ch.push("B_"+c.doc.data().no)});
+first=false;orders=arr;try{localStorage.setItem(KEY,JSON.stringify(orders))}catch(e){}
+if(editing==null)document.getElementById("ono").textContent="B_"+nextNo();render();
+sy(ch.length?"Abhi update hua: "+ch.slice(0,3).join(", "):ON)},function(){sy("Sync nahi ho raha")})}catch(e){}})();
+</script></body></html>
